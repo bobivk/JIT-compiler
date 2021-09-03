@@ -80,8 +80,8 @@ void ASM::pop(size_t size)
 
 void ASM::constant(size_t size)
 {
-    m_memory[m_PC++] = 0x41; //push
-    m_memory[m_PC++] = 0x55; //r13
+    m_memory[m_PC++] = 0x41;
+    m_memory[m_PC++] = 0x55; //push r13
 }
 
 
@@ -141,9 +141,9 @@ void ASM::div()
     m_memory[m_PC++] = 0x7d;
     m_memory[m_PC++] = 0xf8;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cdq
-    idiv    DWORD PTR [rbp-8]
+        mov     eax, DWORD PTR [rbp-4]
+        cdq
+        idiv    DWORD PTR [rbp-8]
     */
 }
 
@@ -159,10 +159,10 @@ void ASM::mod()
     m_memory[m_PC++] = 0x89;
     m_memory[m_PC++] = 0xd0;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cdq
-    idiv    DWORD PTR [rbp-8]
-    mov     eax, edx
+        mov     eax, DWORD PTR [rbp-4]
+        cdq
+        idiv    DWORD PTR [rbp-8]
+        mov     eax, edx
     */
 }
 
@@ -181,10 +181,10 @@ void ASM::less()
     m_memory[m_PC++] = 0xb6;
     m_memory[m_PC++] = 0xc0;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cmp     eax, DWORD PTR [rbp-8]
-    setl    al
-    movzx   eax, al
+        mov     eax, DWORD PTR [rbp-4]
+        cmp     eax, DWORD PTR [rbp-8]
+        setl    al
+        movzx   eax, al
     */
 }
 
@@ -203,10 +203,10 @@ void ASM::lessEq()
     m_memory[m_PC++] = 0xb6;
     m_memory[m_PC++] = 0xc0;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cmp     eax, DWORD PTR [rbp-8]
-    setle   al
-    movzx   eax, al
+        mov     eax, DWORD PTR [rbp-4]
+        cmp     eax, DWORD PTR [rbp-8]
+        setle   al
+        movzx   eax, al
     */
 }
 
@@ -225,10 +225,10 @@ void ASM::greater()
     m_memory[m_PC++] = 0xb6;
     m_memory[m_PC++] = 0xc0;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cmp     eax, DWORD PTR [rbp-8]
-    setg    al
-    movzx   eax, al
+        mov     eax, DWORD PTR [rbp-4]
+        cmp     eax, DWORD PTR [rbp-8]
+        setg    al
+        movzx   eax, al
     */
 }
 
@@ -247,10 +247,11 @@ void ASM::greaterEq()
     m_memory[m_PC++] = 0xb6;
     m_memory[m_PC++] = 0xc0;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cmp     eax, DWORD PTR [rbp-8]
-    setge   al
-    movzx   eax, al*/
+        mov     eax, DWORD PTR [rbp-4]
+        cmp     eax, DWORD PTR [rbp-8]
+        setge   al
+        movzx   eax, al
+    */
 }
 
 void ASM::equal()
@@ -268,10 +269,10 @@ void ASM::equal()
     m_memory[m_PC++] = 0xb6;
     m_memory[m_PC++] = 0xc0;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cmp     eax, DWORD PTR [rbp-8]
-    sete    al
-    movzx   eax, al
+        mov     eax, DWORD PTR [rbp-4]
+        cmp     eax, DWORD PTR [rbp-8]
+        sete    al
+        movzx   eax, al
     */
 }
 
@@ -290,10 +291,10 @@ void ASM::notEqual()
     m_memory[m_PC++] = 0xb6;
     m_memory[m_PC++] = 0xc0;
     /*
-    mov     eax, DWORD PTR [rbp-4]
-    cmp     eax, DWORD PTR [rbp-8]
-    setne   al
-    movzx   eax, al
+        mov     eax, DWORD PTR [rbp-4]
+        cmp     eax, DWORD PTR [rbp-8]
+        setne   al
+        movzx   eax, al
     */
 }
 
@@ -329,12 +330,17 @@ void ASM::jumpF(size_t size) {
 }
 
 void ASM::writeToMemory(int64_t value) {
+    byte* hexNumbers = new byte[4]{ 0 };
+    unsigned index = 0;
     while (value > 0) {
         byte tail = value % 16;
-        m_memory[m_PC++] = tail;
+        hexNumbers[index++] = tail;
         value /= 16;
     }
-    //write trailing zeroes?
+    //write in correct order
+    for (unsigned i = 3; i > 0; i--) {
+        m_memory[m_PC++] = hexNumbers[i];
+    }
 }
 
 void ASM::prolog() {
@@ -365,18 +371,18 @@ void ASM::prolog() {
     m_memory[m_PC++] = 0x00;
     m_memory[m_PC++] = 0x00;
     m_memory[m_PC++] = 0x00;
-/*
-mov    [RSP + 8], RCX
-push   R15
-push   R14
-push   R13
-sub    RSP, 256
-lea    R13, 128[RSP]
+    /*
+        mov    [RSP + 8], RCX
+        push   R15
+        push   R14
+        push   R13
+        sub    RSP, 256
+        lea    R13, 128[RSP]
 
-256 is the fixed allocation size
-establish frame pointer 128 B into the fixed allocation
-to allow more of the fixed area to be addressed by one-byte offsets
-*/
+        256 is the fixed allocation size
+        establish frame pointer 128 B into the fixed allocation
+        to allow more of the fixed area to be addressed by one-byte offsets
+    */
 }
 
 void ASM::epilog() {
