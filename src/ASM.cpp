@@ -8,6 +8,7 @@ void ASM::run() {
     prolog();
     readByteCode();
     epilog();
+    execute();
 }
 
 
