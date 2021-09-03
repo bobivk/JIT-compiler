@@ -5,10 +5,10 @@
 #include<iostream>
 #include"OpCodes.h";
 
+typedef unsigned (*asmFunc)(void);
+
 class ASM
 {
-    typedef unsigned (*asmFunc)(void);
-
 public:
     ASM(std::vector<byte>& byteCode);
     void run();
