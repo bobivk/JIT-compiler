@@ -4,6 +4,11 @@ ASM::ASM(std::vector<byte>& byteCode) : m_byteCode{ byteCode }, m_memorySize{ 0 
 	allocateMemory();
 	
 }
+void ASM::run() {
+    prolog();
+    readByteCode();
+    epilog();
+}
 
 
 void ASM::allocateMemory() {
@@ -21,7 +26,7 @@ void ASM::allocateMemory() {
     else std::cerr << "Could not allocate executable memory.";
 }
 
-int64_t ASM::read_int(size_t size) {
+int64_t ASM::readInt(size_t size) {
     switch (size)
     {
     case 0:
@@ -45,20 +50,292 @@ int64_t ASM::read_int(size_t size) {
         return result;
     }
     }
-    assert(false && "not reached");
     return 0;
 }
 
-void ASM::functionCall() {
-    prolog();
+void ASM::dup()
+{
+    m_memory[m_PC++] = 0x41;
+    m_memory[m_PC++] = 0x4d;
+    m_memory[m_PC++] = 0x89;
+    m_memory[m_PC++] = 0xc1;
+    m_memory[m_PC++] = 0x41;
+    m_memory[m_PC++] = 0x50;
+    m_memory[m_PC++] = 0x41;
+    m_memory[m_PC++] = 0x51;
+    /*
+    pop r8
+    mov r9, r8
+    push r8
+    push r9
+    */
+}
 
+void ASM::pop(size_t size)
+{
+    int64_t destination = readInt(size);
+    m_memory[m_PC++] = 0x41;
+    writeToMemory(destination);
+}
 
-
-
-    epilog();
+void ASM::constant(size_t size)
+{
+    m_memory[m_PC++] = 0x41; //push
+    m_memory[m_PC++] = 0x55; //r13
 }
 
 
+void ASM::add()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x55;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x01;
+    m_memory[m_PC++] = 0xd0;
+    /*
+        mov     edx, DWORD PTR [rbp-4]
+        mov     eax, DWORD PTR [rbp-8]
+        add     eax, edx
+    */
+}
+
+void ASM::sub()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x2b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    sub     eax, DWORD PTR [rbp-8]
+    */
+}
+
+void ASM::mul()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x55;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0xaf;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    /*
+        mov     eax, DWORD PTR [rbp-4]
+        imul    eax, DWORD PTR [rbp-8]
+    */
+}
+
+void ASM::div()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x99;
+    m_memory[m_PC++] = 0xf7;
+    m_memory[m_PC++] = 0x7d;
+    m_memory[m_PC++] = 0xf8;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cdq
+    idiv    DWORD PTR [rbp-8]
+    */
+}
+
+void ASM::mod()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x99;
+    m_memory[m_PC++] = 0xf7;
+    m_memory[m_PC++] = 0x7d;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x89;
+    m_memory[m_PC++] = 0xd0;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cdq
+    idiv    DWORD PTR [rbp-8]
+    mov     eax, edx
+    */
+}
+
+void ASM::less()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x3b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0x9c;
+    m_memory[m_PC++] = 0xc0;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0xb6;
+    m_memory[m_PC++] = 0xc0;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cmp     eax, DWORD PTR [rbp-8]
+    setl    al
+    movzx   eax, al
+    */
+}
+
+void ASM::lessEq()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x3b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0x9e;
+    m_memory[m_PC++] = 0xc0;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0xb6;
+    m_memory[m_PC++] = 0xc0;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cmp     eax, DWORD PTR [rbp-8]
+    setle   al
+    movzx   eax, al
+    */
+}
+
+void ASM::greater()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x3b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0x9f;
+    m_memory[m_PC++] = 0xc0;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0xb6;
+    m_memory[m_PC++] = 0xc0;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cmp     eax, DWORD PTR [rbp-8]
+    setg    al
+    movzx   eax, al
+    */
+}
+
+void ASM::greaterEq()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x3b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0x9d;
+    m_memory[m_PC++] = 0xc0;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0xb6;
+    m_memory[m_PC++] = 0xc0;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cmp     eax, DWORD PTR [rbp-8]
+    setge   al
+    movzx   eax, al*/
+}
+
+void ASM::equal()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x3b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0x94;
+    m_memory[m_PC++] = 0xc0;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0xb6;
+    m_memory[m_PC++] = 0xc0;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cmp     eax, DWORD PTR [rbp-8]
+    sete    al
+    movzx   eax, al
+    */
+}
+
+void ASM::notEqual()
+{
+    m_memory[m_PC++] = 0x8b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xfc;
+    m_memory[m_PC++] = 0x3b;
+    m_memory[m_PC++] = 0x45;
+    m_memory[m_PC++] = 0xf8;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0x95;
+    m_memory[m_PC++] = 0xc0;
+    m_memory[m_PC++] = 0x0f;
+    m_memory[m_PC++] = 0xb6;
+    m_memory[m_PC++] = 0xc0;
+    /*
+    mov     eax, DWORD PTR [rbp-4]
+    cmp     eax, DWORD PTR [rbp-8]
+    setne   al
+    movzx   eax, al
+    */
+}
+
+void ASM::push(size_t size)
+{
+    int64_t value = readInt(size);
+    m_memory[m_PC++] = 0x41;
+    writeToMemory(value);
+}
+
+void ASM::jump(size_t size) {
+    m_memory[m_PC++] = 0xe9; //jmp
+    int64_t destination = readInt(size);
+    writeToMemory(destination);
+}
+
+void ASM::jumpT(size_t size) {
+    int64_t destination = readInt(size);
+    int64_t condition = readInt(1);
+    if (condition) {
+        m_memory[m_PC++] = 0xe9; //jmp;
+        writeToMemory(destination);
+    }
+}
+
+void ASM::jumpF(size_t size) {
+    int64_t destination = readInt(size);
+    int64_t condition = readInt(1);
+    if (!condition) {
+        m_memory[m_PC++] = 0xe9; //jmp;
+        writeToMemory(destination);
+    }
+}
+
+void ASM::writeToMemory(int64_t value) {
+    while (value > 0) {
+        byte tail = value % 16;
+        m_memory[m_PC++] = tail;
+        value /= 16;
+    }
+    //write trailing zeroes?
+}
 
 void ASM::prolog() {
 
@@ -120,7 +397,7 @@ void ASM::epilog() {
     m_memory[m_PC++] = 0xc3; //ret
 }
 
-void ASM::read_bytecode() {
+void ASM::readByteCode() {
     const auto codeSize = m_byteCode.size();
     while (m_byteCodeIndex < codeSize)
     {
@@ -136,285 +413,94 @@ void ASM::read_bytecode() {
             }
             case OpCodes::Dup:
             {
-                m_memory[m_PC++] = 0x41;
-                m_memory[m_PC++] = 0x4d;
-                m_memory[m_PC++] = 0x89;
-                m_memory[m_PC++] = 0xc1;
-                m_memory[m_PC++] = 0x41;
-                m_memory[m_PC++] = 0x50;
-                m_memory[m_PC++] = 0x41;
-                m_memory[m_PC++] = 0x51;
-                /*
-                pop r8
-                mov r9, r8
-                push r8
-                push r9
-                */
+                dup();
                 break;
             }
             case OpCodes::Pop: 
             {
-                m_memory[m_PC++] = 0x41; //pop
-                break;
-            }
-            case OpCodes::PopTo:
-            {
-                //read pointer?
-                int64_t destination = read_int(size);
-                m_memory[m_PC++] = 0x41; //pop
+                pop(size);
                 break;
             }
             case OpCodes::Const:
             {
-                m_memory[m_PC++] = 0x41; //push - why do push and pop have the same opcodes in hex?
-                m_memory[m_PC++] = 0x55; //r13
+                constant(size);
                 break;
             }
             case OpCodes::Add:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x55;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x01;
-                m_memory[m_PC++] = 0xd0;
-                /*
-                    mov     edx, DWORD PTR [rbp-4]
-                    mov     eax, DWORD PTR [rbp-8]
-                    add     eax, edx
-                */
+                add();
                 break;
             }
             case OpCodes::Mul:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x55;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0xaf;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                /*        
-                    mov     eax, DWORD PTR [rbp-4]
-                    imul    eax, DWORD PTR [rbp-8]
-                */
+                mul();
                 break;
             }
             case OpCodes::Div:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x99;
-                m_memory[m_PC++] = 0xf7;
-                m_memory[m_PC++] = 0x7d;
-                m_memory[m_PC++] = 0xf8;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cdq
-                idiv    DWORD PTR [rbp-8]
-                */
+                div();
                 break;
             }
             case OpCodes::Mod:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x99;
-                m_memory[m_PC++] = 0xf7;
-                m_memory[m_PC++] = 0x7d;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x89;
-                m_memory[m_PC++] = 0xd0;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cdq
-                idiv    DWORD PTR [rbp-8]
-                mov     eax, edx
-                */
+                mod();
                 break;
             }
             case OpCodes::Sub:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x2b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                sub     eax, DWORD PTR [rbp-8]
-                */
+                sub();
                 break;
             }
             case OpCodes::Greater:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x3b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0x9f;
-                m_memory[m_PC++] = 0xc0;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0xb6;
-                m_memory[m_PC++] = 0xc0;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cmp     eax, DWORD PTR [rbp-8]
-                setg    al
-                movzx   eax, al
-                */
+                greater();
                 break;
             }
             case OpCodes::Equal:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x3b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0x94;
-                m_memory[m_PC++] = 0xc0;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0xb6;
-                m_memory[m_PC++] = 0xc0;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cmp     eax, DWORD PTR [rbp-8]
-                sete    al
-                movzx   eax, al
-                */
+                equal();
                 break;
             }
             case OpCodes::GreaterEq:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x3b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0x9d;
-                m_memory[m_PC++] = 0xc0;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0xb6;
-                m_memory[m_PC++] = 0xc0;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cmp     eax, DWORD PTR [rbp-8]
-                setge   al
-                movzx   eax, al*/
+                greaterEq();
                 break;
             }
             case OpCodes::Less:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x3b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0x9c;
-                m_memory[m_PC++] = 0xc0;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0xb6;
-                m_memory[m_PC++] = 0xc0;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cmp     eax, DWORD PTR [rbp-8]
-                setl    al
-                movzx   eax, al
-                */
+                less();
                 break;
             }
             case OpCodes::LessEq:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x3b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0x9e;
-                m_memory[m_PC++] = 0xc0;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0xb6;
-                m_memory[m_PC++] = 0xc0;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cmp     eax, DWORD PTR [rbp-8]
-                setle   al
-                movzx   eax, al
-                */
+                lessEq();
                 break;
             }
             case OpCodes::NotEqual:
             {
-                m_memory[m_PC++] = 0x8b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xfc;
-                m_memory[m_PC++] = 0x3b;
-                m_memory[m_PC++] = 0x45;
-                m_memory[m_PC++] = 0xf8;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0x95;
-                m_memory[m_PC++] = 0xc0;
-                m_memory[m_PC++] = 0x0f;
-                m_memory[m_PC++] = 0xb6;
-                m_memory[m_PC++] = 0xc0;
-                /*
-                mov     eax, DWORD PTR [rbp-4]
-                cmp     eax, DWORD PTR [rbp-8]
-                setne   al
-                movzx   eax, al
-                */
+                notEqual();
                 break;
             }
-
-            /*
-            opcodes:
-        +Halt,
-        +Dup,
-        Pop,
-        PopTo,
-        PushFrom,
-        Push,
-        Print,
-        Read,
-        Call,
-        +Ret,
-        Jump,
-        JumpT,
-        JumpF,
-        +Const,
-        String,
-        +Add,
-        +Sub,
-        +Mul,
-        +Div,
-        +Mod,
-        +Less,
-        +LessEq,
-        +Greater,
-        +GreaterEq,
-        +Equal,
-        +NotEqual,
-        LastIndex = NotEqual
-            */
+            case OpCodes::Jump:
+            {
+                jump(size);
+                break;
+            }
+            case OpCodes::JumpT:
+            {
+                jumpT(size);
+                break;
+            }
+            case OpCodes::JumpF:
+            {
+                jumpF(size);
+            }
+            case OpCodes::Push:
+            {
+                push(size);
+                break;
+            }       
         }
-
         m_byteCodeIndex++;
     }
 }
