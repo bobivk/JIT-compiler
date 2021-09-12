@@ -2,9 +2,10 @@
 int main() {
 
 	std::vector<byte>* byteCode = new std::vector<byte>();
-	byteCode->push_back(OpCodes::Add);
-	byteCode->push_back(1);
-	byteCode->push_back(2);
+	//byteCode->push_back(OpCodes::Add);
+	//byteCode->push_back(1);
+	//byteCode->push_back(2);
+	byteCode->push_back(OpCodes::Halt);
 
 	ASM* asmPtr = new ASM(*byteCode);
 	asmPtr->run();

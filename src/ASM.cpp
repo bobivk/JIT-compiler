@@ -371,7 +371,6 @@ void ASM::prolog() {
     m_memory[m_PC++] = 0x00;
     m_memory[m_PC++] = 0x00;
     m_memory[m_PC++] = 0x00;
-    m_memory[m_PC++] = 0x00;
     /*
         mov    [RSP + 8], RCX
         push   R15
